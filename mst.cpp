@@ -227,27 +227,43 @@ vector<Edge> boruvka(int n, vector<vector<float> >& cost){
 	
 	vector<vector<float> > forest(n, vector<float>(n));
 	
-	
 	vector<int> assign(n,-1); //connected components; index of component for each node
 	
 	vector<Edge> compon_min(); //at 'i': minimum cost edge going out of component 'i'
 	vector<float> min_cost;
 	vector<int> min_edge_head;
 	vector<int> min_edge_tail;
-	
-	int component=0;
-	
 	vector<Edge> tree;
+	
+	int component = 0; //number of connected components that were found
+	
+	
+	vector<Node*> nodes;
+	for(int i=0; i<n;i++){
+		Node* node = new Node(i,0,0);
+		nodes.push_back(node);
+	}
+	
+	vector<Edge*> edges;
+	for(int i=0; i<n;i++)
+		for(int j=i+1;j<n;j++)
+			if(cost[i][j]>0){
+				Edge* edge = new Edge(i,j,cost[i][j]);
+				edges.push_back(edge);
+				nodes[i]->adj.push_back(edge);
+				nodes[j]->adj.push_back(edge);
+				}
+	
+	
 	
 	while(true)
 	{
-		
-		component=0;	
+		component = 0;	
 		assign = vector<int>(n,-1);
-		cout<<"asda"<<assign[0]<<endl;
-		for(int i=0;i<n;i++){
+		//cout<<"asda"<<assign[0]<<endl;
+		for(int i=0;i<n;i++)
 			connect_component(i,n,forest,assign,component);
-			}
+			
 		
 		cerr<<"Component:"<<component<<endl;
 		
