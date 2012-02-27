@@ -96,11 +96,9 @@ struct Node{
 	int pred;  	//predecessor
 	float d;		//distance from spanning tree
 	
-	bool done;	//ugly. if already considered in Prim
-	
 	vector<Edge*> adj; //ugly. incident edges (with cost)
 	
-	Node(int i, int p, float dd):index(i),pred(p),d(dd){done=false;}
+	Node(int i, int p, float dd):index(i),pred(p),d(dd){}
 	
 	bool operator<(const Node& n)const{return d>n.d;}//smaller = higher priority
 	
@@ -116,22 +114,21 @@ struct Compare_node_pointers {
       }
  };
 
-struct My_queue{		//implements a priority queue for Node* where i can update the heap (manually)
+struct Node_priority_queue{		//implements a priority queue for Node* where I can update the heap (manually)
 	
 	vector<Node*> v;
 	
-	My_queue(){}
+	Node_priority_queue(){}
 	
-	My_queue(vector<Node*> ve):v(ve){
-			make_heap (v.begin(),v.end(),Compare_node_pointers());
+	Node_priority_queue(vector<Node*> ve):v(ve){
+		make_heap (v.begin(),v.end(),Compare_node_pointers());
 		}
 	
-	Node* pop()
-		{
-			Node* nd= v.front();
-			pop_heap (v.begin(),v.end(),Compare_node_pointers()); 	//the front item is moved to the last place
-			v.pop_back();											//remove the item in the last place
-			return nd;
+	Node* pop(){
+		Node* nd= v.front();
+		pop_heap (v.begin(),v.end(),Compare_node_pointers()); 	//the front item is moved to the last place
+		v.pop_back();											//remove the item in the last place
+		return nd;
 		}
 		
 	Node* top(){
@@ -144,46 +141,26 @@ struct My_queue{		//implements a priority queue for Node* where i can update the
 		}
 		
 	void update(){
-			make_heap (v.begin(),v.end(),Compare_node_pointers());	//call make heap on the vector
+		make_heap (v.begin(),v.end(),Compare_node_pointers());	//call make_heap on the vector
 		}	
 	
-	};
+};
 
 
-vector<Edge> prim(int n, vector<vector<float> >& cost){ //with priority queue
+vector<Edge> prim(int n, vector<vector<float> >& cost){
 		
-	My_queue Q;	
+	Node_priority_queue Q;	
 	vector<Node*> nodes;
-	
-	
-	
-	vector<bool> marked;
-	
-	
-	vector<Edge> ad;
-	for(int j=1;j<n;j++)
-			if(cost[0][j]>0)
-				ad.push_back(Edge(0,j,cost[0][j]));
-	
+	vector<bool> marked(n,false); //marked nodes
+	vector<Edge> tree;
 	
 	Node* node = new Node(0,0,0);
 	nodes.push_back(node);
 	Q.push(node);
-	
-	
-	vector<Edge> adj;
 	for(int i=1; i<n;i++){
-		adj = vector<Edge>();
-		for(int j=0;j<n;j++)
-			if(cost[i][j]>0)
-				{	adj.push_back(Edge(i,j,cost[i][j]));
-					cout<<"Node "<<i<<", adj:"<<j<<endl;
-					}
-		Node* node = new Node(i,-1,999);
+		Node* node = new Node(i,-1,9999);
 		nodes.push_back(node);
 		Q.push(node);
-				
-		
 	}
 	
 	
@@ -195,36 +172,26 @@ vector<Edge> prim(int n, vector<vector<float> >& cost){ //with priority queue
 				edges.push_back(edge);
 				nodes[i]->adj.push_back(edge);
 				nodes[j]->adj.push_back(edge);
-				
 				}
-	
-	
-	
-	
-	
-	vector<Edge> tree;
 	
 	
 	for(int i=0;i<n;i++){
 		Node* current = Q.pop();
-		current->done=true;	
+		marked[current->index]=true;	
 		
-		if(i>0)
-		{
+		if(i>0){
 			cout<<"("<<current->index<<","<<current->pred<<"):"<<current->d<<endl;
-			tree.push_back(Edge(current->adj[0]->head,current->pred,current->d));
+			tree.push_back(Edge(current->index,current->pred,current->d));
 		}
 			
 		for(int j=0;j<(int)current->adj.size();j++)
-			if(nodes[current->adj[j]->tail]->done==false && nodes[current->adj[j]->tail]->d > current->adj[j]->cost)
-				{
-						nodes[current->adj[j]->tail]->d=current->adj[j]->cost;
+			if(marked[current->adj[j]->tail]==false && nodes[current->adj[j]->tail]->d > current->adj[j]->cost)
+				{		nodes[current->adj[j]->tail]->d=current->adj[j]->cost;
 						nodes[current->adj[j]->tail]->pred=i;
 						Q.update();
 				}
-			else if(nodes[current->adj[j]->head]->done==false && nodes[current->adj[j]->head]->d > current->adj[j]->cost)
-				{
-						nodes[current->adj[j]->head]->d=current->adj[j]->cost;
+			else if(marked[current->adj[j]->head]==false && nodes[current->adj[j]->head]->d > current->adj[j]->cost)
+				{		nodes[current->adj[j]->head]->d=current->adj[j]->cost;
 						nodes[current->adj[j]->head]->pred=i;
 						Q.update();
 				} 
@@ -233,8 +200,7 @@ vector<Edge> prim(int n, vector<vector<float> >& cost){ //with priority queue
 		}
 	
 	return tree;
-	
-	
+
 }
 
 
