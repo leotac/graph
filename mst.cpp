@@ -92,15 +92,15 @@ vector<Edge> kruskal(int n, vector<vector<float> >& cost)
 }
 
 struct Node{
-	
+	int index;
 	int pred;  	//predecessor
-	int d;		//distance from spanning tree
+	float d;		//distance from spanning tree
 	
 	bool done;	//ugly. if already considered in Prim
 	
-	vector<Edge> adj; //ugly. incident edges (with cost)
+	vector<Edge*> adj; //ugly. incident edges (with cost)
 	
-	Node(int p, int dd, vector<Edge>& ad):pred(p),d(dd),adj(ad){done=false;}
+	Node(int i, int p, float dd):index(i),pred(p),d(dd){done=false;}
 	
 	bool operator<(const Node& n)const{return d>n.d;}//smaller = higher priority
 	
@@ -155,13 +155,18 @@ vector<Edge> prim(int n, vector<vector<float> >& cost){ //with priority queue
 	My_queue Q;	
 	vector<Node*> nodes;
 	
+	
+	
+	vector<bool> marked;
+	
+	
 	vector<Edge> ad;
 	for(int j=1;j<n;j++)
 			if(cost[0][j]>0)
 				ad.push_back(Edge(0,j,cost[0][j]));
 	
 	
-	Node* node = new Node(0,0,ad);
+	Node* node = new Node(0,0,0);
 	nodes.push_back(node);
 	Q.push(node);
 	
@@ -174,12 +179,27 @@ vector<Edge> prim(int n, vector<vector<float> >& cost){ //with priority queue
 				{	adj.push_back(Edge(i,j,cost[i][j]));
 					cout<<"Node "<<i<<", adj:"<<j<<endl;
 					}
-		Node* node = new Node(-1,999,adj);
+		Node* node = new Node(i,-1,999);
 		nodes.push_back(node);
 		Q.push(node);
 				
 		
 	}
+	
+	
+	vector<Edge*> edges;
+	for(int i=0; i<n;i++)
+		for(int j=i+1;j<n;j++)
+			if(cost[i][j]>0){
+				Edge* edge = new Edge(i,j,cost[i][j]);
+				edges.push_back(edge);
+				nodes[i]->adj.push_back(edge);
+				nodes[j]->adj.push_back(edge);
+				
+				}
+	
+	
+	
 	
 	
 	vector<Edge> tree;
@@ -191,28 +211,34 @@ vector<Edge> prim(int n, vector<vector<float> >& cost){ //with priority queue
 		
 		if(i>0)
 		{
-			cout<<"("<<current->adj[0].head<<","<<current->pred<<"):"<<current->d<<endl;
-			tree.push_back(Edge(current->adj[0].head,current->pred,current->d));
+			cout<<"("<<current->index<<","<<current->pred<<"):"<<current->d<<endl;
+			tree.push_back(Edge(current->adj[0]->head,current->pred,current->d));
 		}
 			
 		for(int j=0;j<(int)current->adj.size();j++)
-			if(nodes[current->adj[j].tail]->done==false && nodes[current->adj[j].tail]->d > current->adj[j].cost)
+			if(nodes[current->adj[j]->tail]->done==false && nodes[current->adj[j]->tail]->d > current->adj[j]->cost)
 				{
-						nodes[current->adj[j].tail]->d=current->adj[j].cost;
-						nodes[current->adj[j].tail]->pred=i;
+						nodes[current->adj[j]->tail]->d=current->adj[j]->cost;
+						nodes[current->adj[j]->tail]->pred=i;
 						Q.update();
 				}
+			else if(nodes[current->adj[j]->head]->done==false && nodes[current->adj[j]->head]->d > current->adj[j]->cost)
+				{
+						nodes[current->adj[j]->head]->d=current->adj[j]->cost;
+						nodes[current->adj[j]->head]->pred=i;
+						Q.update();
+				} 
+				
 			
 		}
 	
 	return tree;
 	
 	
-	}
+}
 
 
-void connect_component(int i, int n, vector<vector<float> >& forest, vector<int>& assign, int& component)
-{
+void connect_component(int i, int n, vector<vector<float> >& forest, vector<int>& assign, int& component){
 	cout<<i<<":"<<assign[i]<<endl;
 	if(assign[i]==-1)
 		{assign[i]=(component++);
@@ -238,55 +264,60 @@ vector<Edge> boruvka(int n, vector<vector<float> >& cost){
 	
 	vector<int> assign(n,-1); //connected components; index of component for each node
 	
-	vector<Edge> compon_min(); //minimum cost edge going out of component 'i'
+	vector<Edge> compon_min(); //at 'i': minimum cost edge going out of component 'i'
 	vector<float> min_cost;
 	vector<int> min_edge_head;
 	vector<int> min_edge_tail;
 	
 	int component=0;
 	
+	vector<Edge> tree;
+	
 	while(true)
 	{
 		
-	component=0;	
-	assign = vector<int>(n,-1);
-	cout<<"asda"<<assign[0]<<endl;
-	for(int i=0;i<n;i++){
-		connect_component(i,n,forest,assign,component);
-		}
-	
-	cerr<<"Component:"<<component<<endl;
-	
-	if(component==1)
-		break;
-	int isfa;
-	cin>>isfa;
-	min_cost=vector<float>(component,999);
-	min_edge_head=vector<int>(component,-1);
-	min_edge_tail=vector<int>(component,-1);
-	
-	for(int i=0;i<n;i++){
-				
-		for(int j=0;j<n;j++){ //Does not work with arcs with same weight. TODO: use lexicographic order
-			if(assign[i]!=assign[j] && cost[i][j]>0 
-				&& cost[i][j]<min_cost[assign[i]] ){
-				
-				min_cost[assign[i]]=cost[i][j];
-				min_edge_head[assign[i]]=i;
-				min_edge_tail[assign[i]]=j;
-				}
+		component=0;	
+		assign = vector<int>(n,-1);
+		cout<<"asda"<<assign[0]<<endl;
+		for(int i=0;i<n;i++){
+			connect_component(i,n,forest,assign,component);
 			}
-	}
-	
-	for(int i=0;i<component;i++){
-		forest[min_edge_head[i]][min_edge_tail[i]]=forest[min_edge_tail[i]][min_edge_head[i]]=min_cost[i];
-		cout<<"C_i:"<<i<<"("<<min_edge_head[i]<<","<<min_edge_tail[i]<<"):";
-		cout<<forest[min_edge_head[i]][min_edge_tail[i]]<<endl;
+		
+		cerr<<"Component:"<<component<<endl;
+		
+		if(component==1)
+			break;
+		
+		min_cost=vector<float>(component,999);
+		min_edge_head=vector<int>(component,-1);
+		min_edge_tail=vector<int>(component,-1);
+		
+		for(int i=0;i<n;i++){
+					
+			for(int j=0;j<n;j++){ //Does not work with arcs with same weight. TODO: use lexicographic order
+				if(assign[i]!=assign[j] && cost[i][j]>0 
+					&& cost[i][j]<min_cost[assign[i]] ){
+					
+					min_cost[assign[i]]=cost[i][j];
+					min_edge_head[assign[i]]=i;
+					min_edge_tail[assign[i]]=j;
+					}
+				}
 		}
-	}
+		
+		
+		
+		for(int i=0;i<component;i++){
+			forest[min_edge_head[i]][min_edge_tail[i]]=forest[min_edge_tail[i]][min_edge_head[i]]=min_cost[i];
+			tree.push_back(Edge(min_edge_head[i],min_edge_tail[i],min_cost[i]));
+			cout<<"C_i:"<<i<<"("<<min_edge_head[i]<<","<<min_edge_tail[i]<<"):";
+			cout<<forest[min_edge_head[i]][min_edge_tail[i]]<<endl;
+			}
+		
+		}
 	
 	
-	
+	return tree;
 	
 	}
 
@@ -312,7 +343,7 @@ int main()
   
   vector<Edge> tree = kruskal(n, c);
   vector<Edge> tree2 = prim(n,c);
-  vector <Edge> tree3 = boruvka(n,c);
+  vector<Edge> tree3 = boruvka(n,c);
   
   return 0;
 }
