@@ -93,8 +93,8 @@ vector<Edge> kruskal(int n, vector<vector<float> >& cost)
 
 struct Node{
 	int index;
-	int pred;  	   	//predecessor or root (in Boruvka)
-	float d;		//distance from spanning tree
+	int pred;  	   	//predecessor (Prim)
+	float d;		//distance from spanning tree (Prim)
 	
 	vector<Edge*> adj; //incident edges
 	
@@ -152,6 +152,8 @@ vector<Edge> prim(int n, vector<vector<float> >& cost){
 	vector<bool> marked(n,false); //marked nodes
 	vector<Edge> tree;
 	
+	//Build adjacency list
+	
 	Node* node = new Node(0,0,0);
 	nodes.push_back(node);
 	Q.push(node);
@@ -170,6 +172,8 @@ vector<Edge> prim(int n, vector<vector<float> >& cost){
 				nodes[i]->adj.push_back(edge);
 				nodes[j]->adj.push_back(edge);
 				}
+	
+	//Prim
 	
 	for(int i=0;i<n;i++){
 		Node* current = Q.pop();
@@ -199,13 +203,14 @@ vector<Edge> prim(int n, vector<vector<float> >& cost){
 }
 
 
-vector<Edge> boruvka(int n, vector<vector<float> >& cost){ //Boruvka using UnionFind
-	
+vector<Edge> boruvka(int n, vector<vector<float> >& cost){ //Boruvka using UnionFind structure
 	
 	vector<Edge*> compon_min; 	//compon_min[i]: minimum-cost edge going out of component 'i'
 	vector<float> min_cost;		//^its cost
-	vector<Edge> tree;			//edges in mst forest
+	vector<Edge> tree;			//edges in mst
+	UnionFind forest(n);
 	
+	//Build adjacency list
 		
 	vector<Node*> nodes;
 	for(int i=0; i<n;i++){
@@ -223,14 +228,15 @@ vector<Edge> boruvka(int n, vector<vector<float> >& cost){ //Boruvka using Union
 				nodes[j]->adj.push_back(edge);
 				}
 	
-	UnionFind forest(n);
+	//Boruvka
+	
 	int size=0;
 	
 	while(size < n-1)
 	{
 			
 		vector<int> roots;
-		min_cost=vector<float>(n,9999);  //not nice at all
+		min_cost=vector<float>(n,9999);  //not nice, could be done better?
 		compon_min=vector<Edge*>(n);
 		
 		for(int i=0;i<n;i++){
@@ -272,7 +278,8 @@ vector<Edge> boruvka(int n, vector<vector<float> >& cost){ //Boruvka using Union
 			
 			int this_comp = forest.find_set(roots[i]);
 			if(forest.find_set(compon_min[this_comp]->head)!=forest.find_set(compon_min[this_comp]->tail)){
-				tree.push_back(Edge(compon_min[this_comp]->head,compon_min[this_comp]->tail,min_cost[this_comp]));
+				tree.push_back(*compon_min[this_comp]);
+				//tree.push_back(Edge(compon_min[this_comp]->head,compon_min[this_comp]->tail,min_cost[this_comp]));
 				cout<<"("<<compon_min[this_comp]->head<<","<<compon_min[this_comp]->tail<<"):";
 				cout<<min_cost[this_comp]<<endl;
 				
