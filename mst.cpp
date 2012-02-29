@@ -199,34 +199,14 @@ vector<Edge> prim(int n, vector<vector<float> >& cost){
 }
 
 
-void connect_component(int i, vector<Node*>& nodes, vector<vector<Edge*> >& mst_edges, int& component){
-	if(nodes[i]->pred ==-1){	
-			nodes[i]->pred = (component++);
-				}
-	//cout<<i<<" in component"<<nodes[i]->pred<<endl;	
-	for(int j=0;j<(int)mst_edges[i].size();j++){
+vector<Edge> boruvka(int n, vector<vector<float> >& cost){ //Boruvka using UnionFind
+	
+	
+	vector<Edge*> compon_min; 	//compon_min[i]: minimum-cost edge going out of component 'i'
+	vector<float> min_cost;		//^its cost
+	vector<Edge> tree;			//edges in mst forest
+	
 		
-		int other= (mst_edges[i][j]->head != i)? mst_edges[i][j]->head : mst_edges[i][j]->tail;
-		if( nodes[other]->pred != nodes[i]->pred){
-			nodes[other]->pred = nodes[i]->pred;
-			connect_component(other,nodes, mst_edges, nodes[i]->pred);
-			}	
-		
-	}
-		
-}
-
-vector<Edge> boruvka(int n, vector<vector<float> >& cost){
-	
-	
-	vector<Edge*> compon_min; //at 'i': minimum cost edge going out of component 'i'
-	vector<float> min_cost;
-	vector<Edge> tree;		//edges in mst forest
-	vector<vector<Edge*> > mst_edges(n, vector<Edge*>()); //edges in mst forest
-	
-	int component = 0; //number of connected components that were found in this round
-	
-	
 	vector<Node*> nodes;
 	for(int i=0; i<n;i++){
 		Node* node = new Node(i,-1,0);
@@ -245,78 +225,66 @@ vector<Edge> boruvka(int n, vector<vector<float> >& cost){
 	
 	UnionFind forest(n);
 	int size=0;
-	while(size<n-1)
+	
+	while(size < n-1)
 	{
-		component = 0;	
-		
-		for(int i=0; i<n;i++){
-				nodes[i]->pred=-1;
-		}
-		
-		for(int i=0;i<n;i++)
-			connect_component(i,nodes,mst_edges,component);
 			
-		
-		cerr<<"Components:"<<component<<endl;
-		
-			
-		//if(component==1)
-		//	break;
-		
-		min_cost=vector<float>(component,999);
-		compon_min=vector<Edge*>(component);
+		vector<int> roots;
+		min_cost=vector<float>(n,9999);  //not nice at all
+		compon_min=vector<Edge*>(n);
 		
 		for(int i=0;i<n;i++){
-			int thiscomp= forest.find_set(i);
-			int this_comp = nodes[i]->pred;
-			cout<<"i: "<<i<<" thiscomp:"<<thiscomp<<endl;
-			cout<<"i: "<<i<<" this_comp:"<<this_comp<<endl;
+			int this_comp = forest.find_set(i);
+			
+			if(i == this_comp) //list of roots of the connected components
+				roots.push_back(i);
+			
+			//cout<<"i: "<<i<<" this_comp:"<<this_comp<<endl;
 			
 			for(int j=0;j<(int)nodes[i]->adj.size();j++){
-				int other= (nodes[i]->adj[j]->head != i)? nodes[i]->adj[j]->head  : nodes[i]->adj[j]->tail;
+				int other= (nodes[i]->adj[j]->head != i)? nodes[i]->adj[j]->head : nodes[i]->adj[j]->tail;
 				
-				if( nodes[other]->pred != this_comp 
+				// Consider edge if outgoing from current component and has smaller cost than current best 
+				// (or equal and lexicographically smaller)
+				if( forest.find_set(other) != this_comp 
 					&& (nodes[i]->adj[j]->cost < min_cost[this_comp]
 						|| 	(nodes[i]->adj[j]->cost == min_cost[this_comp] 
 							&&  ( nodes[i]->adj[j]->head < compon_min[this_comp]->head
 									|| (nodes[i]->adj[j]->head == compon_min[this_comp]->head && nodes[i]->adj[j]->tail < compon_min[this_comp]->tail))
-						))
-					){
+						)))
+					{
 						min_cost[this_comp] = nodes[i]->adj[j]->cost;
 						compon_min[this_comp] = nodes[i]->adj[j];
-						//cout<<"min for component "<<nodes[i]->pred<<" is now "<<nodes[i]->adj[j]->cost<<endl;
+						//cout<<"min for component "<<this_comp<<" is now "<<nodes[i]->adj[j]->cost<<endl;
 											
 					}	
 				
 				}
 		}
+	
 		
-
-		
-		
-		
-		for(int i=0;i<component;i++){
+		for(int i=0;i<(int)roots.size();i++){	
+			// Loop on unconnected components (one member for each one, their roots)
+			// At the beginning of the loop, for each i it holds: find_set(roots[i])==roots[i], 
+			// but this does not hold after join() is called, thus connecting components.
+			// => Necessary to do every time "find_set" so not to add twice the same edge in case it was selected by 2 components
+			// and, at the same time, build the new connected components
 			
-			//possibility of adding twice the same edge if minimal for both components, but it's not a problem
-			mst_edges[compon_min[i]->head].push_back(compon_min[i]);
-			mst_edges[compon_min[i]->tail].push_back(compon_min[i]);
-			
-			
-			if(forest.find_set(compon_min[i]->head)!=forest.find_set(compon_min[i]->tail)){
-				forest.join(compon_min[i]->head,compon_min[i]->tail);
-				tree.push_back(Edge(compon_min[i]->head,compon_min[i]->tail,min_cost[i]));
-				cout<<"("<<compon_min[i]->head<<","<<compon_min[i]->tail<<"):";
-				cout<<min_cost[i]<<endl;
+			int this_comp = forest.find_set(roots[i]);
+			if(forest.find_set(compon_min[this_comp]->head)!=forest.find_set(compon_min[this_comp]->tail)){
+				tree.push_back(Edge(compon_min[this_comp]->head,compon_min[this_comp]->tail,min_cost[this_comp]));
+				cout<<"("<<compon_min[this_comp]->head<<","<<compon_min[this_comp]->tail<<"):";
+				cout<<min_cost[this_comp]<<endl;
+				
+				forest.join(compon_min[this_comp]->head,compon_min[this_comp]->tail);
+				
 				size++;
-				cout<<"Size: "<<size<<endl;
+				//cout<<"Size: "<<size<<endl;
 				}
-			
-			
 			
 			}
 
-		}
-	
+	}
 	
 	return tree;
 	
@@ -332,7 +300,7 @@ int main()
   //c[0][1] = c[1][0] = 1;
   
   
-  //Avoid same weight. Positive costs. If 0, assume nodes not connected.
+  //Positive costs. If 0 (default value), assume nodes not connected.
   c[0][2] = c[2][0] = 3.2;
   c[0][3] = c[3][0] = 2.2;
   c[1][2] = c[2][1] = 2;
