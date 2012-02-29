@@ -19,7 +19,7 @@ struct Edge{
 
 struct UnionFind{
 	vector<int> parent; //parent for each node
-	vector <int> rank;  //rank for each node
+	vector<int> rank;  //rank for each node
 	
 	UnionFind(int n): parent(n), rank(n)
 	{
@@ -221,7 +221,7 @@ vector<Edge> boruvka(int n, vector<vector<float> >& cost){
 	
 	vector<Edge*> compon_min; //at 'i': minimum cost edge going out of component 'i'
 	vector<float> min_cost;
-	vector<Edge> tree;
+	vector<Edge> tree;		//edges in mst forest
 	vector<vector<Edge*> > mst_edges(n, vector<Edge*>()); //edges in mst forest
 	
 	int component = 0; //number of connected components that were found in this round
@@ -243,9 +243,9 @@ vector<Edge> boruvka(int n, vector<vector<float> >& cost){
 				nodes[j]->adj.push_back(edge);
 				}
 	
-	
-	
-	while(true)
+	UnionFind forest(n);
+	int size=0;
+	while(size<n-1)
 	{
 		component = 0;	
 		
@@ -259,14 +259,19 @@ vector<Edge> boruvka(int n, vector<vector<float> >& cost){
 		
 		cerr<<"Components:"<<component<<endl;
 		
-		if(component==1)
-			break;
+			
+		//if(component==1)
+		//	break;
 		
 		min_cost=vector<float>(component,999);
 		compon_min=vector<Edge*>(component);
 		
 		for(int i=0;i<n;i++){
+			int thiscomp= forest.find_set(i);
 			int this_comp = nodes[i]->pred;
+			cout<<"i: "<<i<<" thiscomp:"<<thiscomp<<endl;
+			cout<<"i: "<<i<<" this_comp:"<<this_comp<<endl;
+			
 			for(int j=0;j<(int)nodes[i]->adj.size();j++){
 				int other= (nodes[i]->adj[j]->head != i)? nodes[i]->adj[j]->head  : nodes[i]->adj[j]->tail;
 				
@@ -277,8 +282,8 @@ vector<Edge> boruvka(int n, vector<vector<float> >& cost){
 									|| (nodes[i]->adj[j]->head == compon_min[this_comp]->head && nodes[i]->adj[j]->tail < compon_min[this_comp]->tail))
 						))
 					){
-						min_cost[nodes[i]->pred] = nodes[i]->adj[j]->cost;
-						compon_min[nodes[i]->pred] = nodes[i]->adj[j];
+						min_cost[this_comp] = nodes[i]->adj[j]->cost;
+						compon_min[this_comp] = nodes[i]->adj[j];
 						//cout<<"min for component "<<nodes[i]->pred<<" is now "<<nodes[i]->adj[j]->cost<<endl;
 											
 					}	
@@ -296,9 +301,18 @@ vector<Edge> boruvka(int n, vector<vector<float> >& cost){
 			mst_edges[compon_min[i]->head].push_back(compon_min[i]);
 			mst_edges[compon_min[i]->tail].push_back(compon_min[i]);
 			
-			tree.push_back(Edge(compon_min[i]->head,compon_min[i]->tail,min_cost[i]));
-			cout<<"("<<compon_min[i]->head<<","<<compon_min[i]->tail<<"):";
-			cout<<min_cost[i]<<endl;
+			
+			if(forest.find_set(compon_min[i]->head)!=forest.find_set(compon_min[i]->tail)){
+				forest.join(compon_min[i]->head,compon_min[i]->tail);
+				tree.push_back(Edge(compon_min[i]->head,compon_min[i]->tail,min_cost[i]));
+				cout<<"("<<compon_min[i]->head<<","<<compon_min[i]->tail<<"):";
+				cout<<min_cost[i]<<endl;
+				size++;
+				cout<<"Size: "<<size<<endl;
+				}
+			
+			
+			
 			}
 
 		}
