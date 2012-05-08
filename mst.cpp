@@ -1,9 +1,14 @@
 //TODO: rewrite boruvka and prim. possibly parallelize boruvka
 
+#ifndef _MST_CPP
+#define _MST_CPP
+
+
 #include <iostream>
 #include <vector>
 #include <algorithm>
 #include <queue>
+
 
 using namespace std;
 
@@ -113,7 +118,7 @@ struct Compare_node_pointers {
       }
  };
 
-struct Node_priority_queue{		//implements a priority queue for Node* where I can update the heap (manually)
+struct Node_priority_queue{		//implements a priority queue for Node* where I can update the heap ('manually')
 
 	vector<Node*> v;
 	
@@ -298,31 +303,33 @@ vector<Edge> boruvka(int n, vector<vector<float> >& cost){ //Boruvka using Union
 	}
 
 
-int main()
-{
-  int n = 6;
+//int main()
+//{
+  //int n = 6;
 
-  vector< vector<float> > c(n, vector<float>(n));
+  //vector< vector<float> > c(n, vector<float>(n));
 
-  //c[0][1] = c[1][0] = 1;
+  ////c[0][1] = c[1][0] = 1;
   
   
-  //Positive costs. If 0 (default value), assume nodes not connected.
-  c[0][2] = c[2][0] = 3.2;
-  c[0][3] = c[3][0] = 2.2;
-  c[1][2] = c[2][1] = 2;
-  c[1][3] = c[3][1] = 4;
-  c[2][3] = c[3][2] = 3.1;
-  c[5][4] = c[4][5] = 1;
-  c[3][4] = c[4][3] = 3;
-  c[0][5] = c[5][0] = 2;
+  ////Positive costs. If 0 (default value), assume nodes not connected.
+  //c[0][2] = c[2][0] = 3.2;
+  //c[0][3] = c[3][0] = 2.2;
+  //c[1][2] = c[2][1] = 2;
+  //c[1][3] = c[3][1] = 4;
+  //c[2][3] = c[3][2] = 3.1;
+  //c[5][4] = c[4][5] = 1;
+  //c[3][4] = c[4][3] = 3;
+  //c[0][5] = c[5][0] = 2;
   
-  cout<<"========== Kruskal =========="<<endl;
-  vector<Edge> tree = kruskal(n, c);
-  cout<<"==========  Prim   =========="<<endl;
-  vector<Edge> tree2 = prim(n,c);
-  cout<<"========== Boruvka =========="<<endl;
-  vector<Edge> tree3 = boruvka(n,c);
+  //cout<<"========== Kruskal =========="<<endl;
+  //vector<Edge> tree = kruskal(n, c);
+  //cout<<"==========  Prim   =========="<<endl;
+  //vector<Edge> tree2 = prim(n,c);
+  //cout<<"========== Boruvka =========="<<endl;
+  //vector<Edge> tree3 = boruvka(n,c);
   
-  return 0;
-}
+  //return 0;
+//}
+
+#endif
