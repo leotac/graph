@@ -1,12 +1,10 @@
 from gurobipy import *
 import random
 import math
-
-# Model data
-
+import mst
 
 def tsp(nodes, arcs, cost):
-
+     
      n=len(nodes)
      arcs = tuplelist(arcs)
 
@@ -41,7 +39,7 @@ def tsp(nodes, arcs, cost):
 
      # Print solution
      if m.status == GRB.status.OPTIMAL:
-             print '\nOptimal tour:'
+             print '\nNaive Integer Program\nOptimal tour:'
              for i,j in arcs:
                  if x[i,j].x > 0.1:
                      print i, '->', j, ':', x[i,j].x
@@ -51,12 +49,150 @@ def tsp(nodes, arcs, cost):
                                      if x[a,b].x == 1:
                                              tour.append(b)
                                              break
-             print tour     
+             print tour
+             print 'Cost: ', sum([cost[(nodes[i],nodes[(i+1)%n])] for i in range(n)])
+             return tour
                      
                 
 
 
+def tsp2(nodes, arcs, cost):
+     n=len(nodes)
+     arcs = tuplelist(arcs)
 
+     
+     # Create optimization model
+     m = Model('tsp')
+
+     # Create variables
+     x = {}
+     for i,j in arcs:
+          x[i,j] = m.addVar(vtype=GRB.BINARY, obj=cost[i,j],
+                                    name='x_%s_%s' % (i, j))
+          #x[i,j] = m.addVar(lb=0, ub=1, obj=cost[i,j],
+                                    #name='x_%s_%s' % (i, j))
+     m.update()
+
+     # Arc capacity constraints
+     for i in nodes:
+         m.addConstr(quicksum(x[i,j] for (i,j) in arcs.select(i,'*')) == 1,
+                     'out_%s' % (i))
+
+     for i in nodes:
+         m.addConstr(quicksum(x[j,i] for (j,i) in arcs.select('*',i)) == 1,
+                     'in_%s' % (i))
+
+     sepObj=0
+     while(sepObj<2):
+
+         # Compute optimal solution
+         m.optimize()
+             
+##         if m.status == GRB.status.OPTIMAL:
+##             print '\nOptimal tour:'
+##             for i,j in arcs:
+##                 if x[i,j].x > 0.1:
+##                     print i, '->', j, ':', x[i,j].x
+##                     
+
+                     
+                     
+         s=nodes[0]
+             
+         for t in nodes[1:]:
+             sep = Model('separation')
+
+             # Create variables
+             alpha = {}
+             for i,j in arcs:
+                             alpha[i,j] = sep.addVar(lb=0,ub=1, obj=(max(x[i,j].x,x[j,i].x) if (j,i) in arcs else x[i,j].x),
+                                    name='alpha_%s_%s' % (i, j))
+             pi = {}
+             for i in nodes:
+                              pi[i] = sep.addVar(obj=0,name='pi_%s'%i)
+                     
+             sep.update()
+
+             #Constraints
+             for i,j in arcs:
+                 sep.addConstr(alpha[i,j] >= pi[i] - pi[j], 'potentials_%s_%s' % (i,j))
+                 sep.addConstr(alpha[i,j] >= pi[j] - pi[i], 'potentials2_%s_%s' % (i,j))
+             sep.update()
+             
+             #Root potential
+             sep.addConstr(pi[s] - pi[t]>=1,'root_potential')
+             sep.optimize()
+             
+             sepObj=sep.getObjective().getValue()
+##             print '\nSeparation minimum', sepObj
+##             for i,j in arcs:
+##                 print i, '->', j, ':', alpha[i,j].x
+##                             
+##             for i in nodes:
+##                 print i, ':', pi[i].x	
+                             
+             if sepObj<2:
+                 m.addConstr(quicksum(x[i,j] for (i,j) in arcs if alpha[i,j].x>=1)>=1,
+                     'aho_%s_%s' % (s,t))
+                 m.update()
+                 #print 'Added 1 constraint'
+                 print '*',
+                 #m.write('pippo.lp')
+                 break;
+             
+
+
+
+
+     # Print solution
+     if m.status == GRB.status.OPTIMAL:
+             print '\nInteger Program w. on-the-fly cuts generation\nOptimal tour:'
+             for i,j in arcs:
+                 if x[i,j].x > 0.1:
+                     print i, '->', j, ':', x[i,j].x
+             tour = [nodes[0]]
+             for i in xrange(n-1):
+                             for (a,b) in arcs.select(tour[i],'*'):
+                                     if x[a,b].x == 1:
+                                             tour.append(b)
+                                             break
+             print tour
+             print 'Cost: ', sum([cost[(nodes[i],nodes[(i+1)%n])] for i in range(n)])
+             return tour
+                     
+                     
+# Complete Metric Graphs only!    
+def doubletree(nodes,arcs,cost):
+     n=len(nodes)
+     tree = mst.kruskal(nodes, arcs, cost)
+     adj = {}
+
+     # Create adjacency list
+     for arc in tree:
+          adj.setdefault(arc[0],[]).append(arc[1])
+          adj.setdefault(arc[1],[]).append(arc[0])
+
+     visited = dict.fromkeys(nodes, False)
+     stack = [nodes[0]]
+     tour = []
+     while len(stack)>0:
+          node = stack.pop()
+          visited[node]=True
+          tour.append(node)
+
+          for i in adj[node]:
+               if visited[i]!=True:
+                    stack.append(i)
+
+     print '\nDouble-tree approximation algorithm\nOptimal tour:'
+     print tour
+     #print [(tour[i],tour[(i+1)%n],cost[(tour[i],tour[(i+1)%n])]) for i in range(n)]
+     print 'Cost: ', sum([cost[(tour[i],tour[(i+1)%n])] for i in range(n)])
+     return tour
+     
+     
+
+             
 
 def main(n):
      nodes = ['Detroit', 'Denver', 'Boston', 'New York', 'Seattle']
@@ -104,6 +240,8 @@ def main(n):
 ##       })
 
      tsp(nodes,arcs, cost)
+     tsp2(nodes,arcs, cost)
+     doubletree(nodes,arcs, cost)
          
      return 0
 

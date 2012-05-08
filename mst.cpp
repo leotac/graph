@@ -51,6 +51,8 @@ struct UnionFind{
 	{
 		i=find_set(i);
 		j=find_set(j);
+        if (i==j)
+            return;
 		if (rank[i]>rank[j])  //i longer. attach j to i
 			parent[j]=i;
 		else{
