@@ -3,6 +3,69 @@ import random
 import math
 import mst
 
+def euler(nodes, arcs):
+    n=len(nodes)
+        
+    # Create adjacency list
+    adj = {}
+    for arc in arcs:
+         if arc[0]!=arc[1]:
+             adj.setdefault(arc[0],[]).append(arc[1])
+             adj.setdefault(arc[1],[]).append(arc[0])
+
+    for node in nodes:
+        if len(adj[node])%2!=0 :
+            print node
+            print adj[node]
+            return [],[]
+    
+    tours={} # Eulerian subtours starting in [node]
+
+    for node in nodes:
+            print "--------------------",node
+            tour=[node]
+            while len(adj[node])>0:
+                print node
+
+                i=adj[node][0]
+                adj[node].remove(i)
+                adj[i].remove(node)
+                node=i
+                tour.append(node)
+                
+            print tour
+            tours.setdefault(node,[])
+            if len(tour)>1:
+                tours[node]=tour[:-1]
+
+    print "Tours:",tours
+
+
+    # Depth-first visit of the Eulerian subtours to build one single Eulerian tour, if possible
+    visited=dict.fromkeys(nodes,False)
+    
+    # Eulerian tour
+    euler=[]
+    # Hamiltonian tour (shortcutting)
+    tour=[]
+    stack=[nodes[0]]
+    print stack
+    while len(stack)>0:
+        node=stack.pop()
+        euler.append(node)
+        if visited[node]==False:
+            visited[node]=True
+            tour.append(node)
+            print node
+            stack.extend(tours[node])
+
+    print euler
+    print tour
+
+    return euler, tour        
+       
+
+
 def tsp(nodes, arcs, cost):
      
      n=len(nodes)
@@ -73,7 +136,7 @@ def tsp2(nodes, arcs, cost):
                                     #name='x_%s_%s' % (i, j))
      m.update()
 
-     # Arc capacity constraints
+     # Degree constraints
      for i in nodes:
          m.addConstr(quicksum(x[i,j] for (i,j) in arcs.select(i,'*')) == 1,
                      'out_%s' % (i))
@@ -189,9 +252,73 @@ def doubletree(nodes,arcs,cost):
      #print [(tour[i],tour[(i+1)%n],cost[(tour[i],tour[(i+1)%n])]) for i in range(n)]
      print 'Cost: ', sum([cost[(tour[i],tour[(i+1)%n])] for i in range(n)])
      return tour
-     
+
+# Complete Metric Graphs only!    
+def christo(nodes,arcs,cost):
+     n=len(nodes)
+     tree = mst.kruskal(nodes, arcs, cost)
+     adj = {}
+     print "MST",tree
+     # Create adjacency list
+     for arc in tree:
+          adj.setdefault(arc[0],[]).append(arc[1])
+          adj.setdefault(arc[1],[]).append(arc[0])
+
+     odds = []
+     for node in nodes:
+        if len(adj[node])%2!=0 :
+            odds.append(node)
+     print 'odds:',odds
+     match = matching(odds, cost)       
+
+     print tree
+     tree.extend(match)
+     print tree
+     eul,tour=euler(nodes,tree)
      
 
+     print '\nChristophides approximation algorithm\nOptimal tour:'
+     print tour
+     #print [(tour[i],tour[(i+1)%n],cost[(tour[i],tour[(i+1)%n])]) for i in range(n)]
+     print 'Cost: ', sum([cost[(tour[i],tour[(i+1)%n])] for i in range(n)])
+     return tour
+     
+def matching(nodes,cost):
+     m = Model('matching')
+     n = len(nodes)
+     if n%2!=0:
+          return []
+
+     # Create variables
+     x = {}
+     for i in nodes:
+          for j in nodes:
+               if j>i:
+                    x[i,j] = m.addVar(vtype=GRB.BINARY, obj=cost[i,j],
+                                    name='x_%s_%s' % (i, j))
+          
+     m.update()
+
+     # Degree constraints
+     for i in nodes:
+         m.addConstr(quicksum(x[j,k] for j in nodes for k in nodes if (k>j) and (k==i or j==i)) == 1,
+                     'degree_%s' % (i))
+
+     
+     # Compute optimal solution
+     m.optimize()
+
+     match=[]
+     print '\nMatching arcs:'
+     for i in nodes:
+          for j in nodes:
+             if j>i and x[i,j].x > 0.1:
+                  print i, '->', j, ':', x[i,j].x
+                  match.append((i,j))
+
+     return match
+  
+   
              
 
 def main(n):
@@ -218,8 +345,8 @@ def main(n):
                   arcs.append((nodes[i],nodes[j]))
                   arcs.append((nodes[j],nodes[i]))
                   cost[nodes[i],nodes[j]]=cost[nodes[j],nodes[i]]=math.sqrt((x[nodes[i]]-x[nodes[j]])**2 + (y[nodes[i]]-y[nodes[j]])**2)
-##     print x
-##     print y
+     print x
+     print y
 ##     print arcs
 ##     print cost
      
@@ -240,9 +367,9 @@ def main(n):
 ##       })
 
      tsp(nodes,arcs, cost)
-     tsp2(nodes,arcs, cost)
+     #tsp2(nodes,arcs, cost)
      doubletree(nodes,arcs, cost)
-         
+     christo(nodes,arcs, cost)
      return 0
 
 if __name__ == '__main__':
