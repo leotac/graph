@@ -1,7 +1,6 @@
 from gurobipy import *
 
 
-
 class unionfind:
     def __init__(self, nodes):
         self.parent = {}
